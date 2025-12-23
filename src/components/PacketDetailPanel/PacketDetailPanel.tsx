@@ -1,12 +1,8 @@
 import React, { useMemo } from 'react';
-import { Drawer, Tabs, Descriptions, Button, Space, Collapse } from 'antd';
+import { Drawer, Tabs, Descriptions, Button, Space } from 'antd';
 import { EditOutlined, SendOutlined, SwapOutlined, CloseOutlined } from '@ant-design/icons';
 import { useApp } from '../../contexts/AppContext';
-import { packetApi } from '../../api';
 import type { PacketDetail } from '../../types';
-import styles from './PacketDetailPanel.module.css';
-
-const { Panel } = Collapse;
 
 export const PacketDetailPanel: React.FC = () => {
   const { state, dispatch } = useApp();
@@ -65,71 +61,23 @@ export const PacketDetailPanel: React.FC = () => {
       ),
     },
     {
-      key: 'request',
-      label: '请求',
-      children: selectedPacket.protocol === 'HTTP' || selectedPacket.protocol === 'HTTPS' ? (
+      key: 'data',
+      label: '封包数据',
+      children: (
         <div>
-          <div className={styles.section}>
-            <h4>请求行</h4>
-            <pre className={styles.code}>
-              {selectedPacket.method} {selectedPacket.url} HTTP/1.1
-            </pre>
-          </div>
-          {selectedPacket.headers && (
-            <div className={styles.section}>
-              <h4>请求头</h4>
-              <Collapse>
-                <Panel header="查看请求头" key="1">
-                  <pre className={styles.code}>
-                    {JSON.stringify(selectedPacket.headers, null, 2)}
-                  </pre>
-                </Panel>
-              </Collapse>
+          {selectedPacket.packetData && (
+            <div className="mb-4">
+              <h4 className="mb-2 font-semibold">封包数据（十六进制）</h4>
+              <pre className="bg-[#f5f5f5] p-3 rounded overflow-x-auto font-mono text-xs leading-relaxed">{selectedPacket.packetData}</pre>
             </div>
           )}
-          {selectedPacket.requestBody && (
-            <div className={styles.section}>
-              <h4>请求体</h4>
-              <pre className={styles.code}>{selectedPacket.requestBody}</pre>
+          {selectedPacket.packetFunction && (
+            <div className="mb-4">
+              <h4 className="mb-2 font-semibold">封包函数</h4>
+              <pre className="bg-[#f5f5f5] p-3 rounded overflow-x-auto font-mono text-xs leading-relaxed">{selectedPacket.packetFunction}</pre>
             </div>
           )}
         </div>
-      ) : (
-        <div>非HTTP协议，无请求信息</div>
-      ),
-    },
-    {
-      key: 'response',
-      label: '响应',
-      children: selectedPacket.protocol === 'HTTP' || selectedPacket.protocol === 'HTTPS' ? (
-        <div>
-          {selectedPacket.statusCode && (
-            <div className={styles.section}>
-              <h4>状态行</h4>
-              <pre className={styles.code}>HTTP/1.1 {selectedPacket.statusCode}</pre>
-            </div>
-          )}
-          {selectedPacket.headers && (
-            <div className={styles.section}>
-              <h4>响应头</h4>
-              <Collapse>
-                <Panel header="查看响应头" key="1">
-                  <pre className={styles.code}>
-                    {JSON.stringify(selectedPacket.headers, null, 2)}
-                  </pre>
-                </Panel>
-              </Collapse>
-            </div>
-          )}
-          {selectedPacket.responseBody && (
-            <div className={styles.section}>
-              <h4>响应体</h4>
-              <pre className={styles.code}>{selectedPacket.responseBody}</pre>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div>非HTTP协议，无响应信息</div>
       ),
     },
     {
@@ -137,8 +85,8 @@ export const PacketDetailPanel: React.FC = () => {
       label: '原始数据',
       children: (
         <div>
-          <h4>十六进制视图</h4>
-          <pre className={styles.code}>
+          <h4 className="mb-2 font-semibold">十六进制视图</h4>
+          <pre className="bg-[#f5f5f5] p-3 rounded overflow-x-auto font-mono text-xs leading-relaxed">
             {selectedPacket.rawData
               ? Array.from(selectedPacket.rawData)
                   .map((b) => b.toString(16).padStart(2, '0'))
@@ -153,7 +101,7 @@ export const PacketDetailPanel: React.FC = () => {
   return (
     <Drawer
       title={
-        <div className={styles.header}>
+        <div className="flex justify-between items-center w-full">
           <span>数据包详情</span>
           <Space>
             <Button size="small" icon={<EditOutlined />} onClick={handleEdit}>

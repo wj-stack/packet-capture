@@ -1,7 +1,6 @@
 import React, { useMemo, useEffect } from 'react';
 import { Select, Checkbox, Input } from 'antd';
 import { useApp } from '../../contexts/AppContext';
-import styles from './PacketPreview.module.css';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -103,22 +102,23 @@ export const PacketPreview: React.FC = () => {
   };
 
   return (
-    <div className={styles.packetPreview}>
-      <div className={styles.title}>封包预览</div>
-      <div className={styles.content}>
+    <div className="px-2 sm:px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded flex-1 flex flex-col min-h-0 shadow-sm">
+      <div className="font-semibold mb-1.5 text-xs text-center px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-gray-900 dark:text-gray-100">封包预览</div>
+      <div className="flex-1 flex flex-col md:flex-row gap-2 min-h-0 items-stretch">
         <TextArea
           value={rawData}
           onChange={(e) => setRawData(e.target.value)}
-          className={styles.leftArea}
+          className="flex-1 font-mono text-xs resize-none h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-700 min-h-[100px] md:min-h-0"
           placeholder="原始数据（十六进制）"
           readOnly={!!selectedPacket}
         />
-        <div className={styles.controls}>
-          <div className={styles.label}>解密为=&gt;</div>
+        <div className="flex flex-row md:flex-col items-center justify-center gap-2 px-2 min-w-full md:min-w-[100px] md:max-w-[100px]">
+          <div className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">解密为=&gt;</div>
           <Select
             value={decodeFormat}
             onChange={setDecodeFormat}
-            className={styles.select}
+            className="w-full md:w-full"
+            size="small"
           >
             {DECODE_OPTIONS.map((opt) => (
               <Option key={opt} value={opt}>
@@ -129,7 +129,7 @@ export const PacketPreview: React.FC = () => {
           <Checkbox
             checked={realtimePreview}
             onChange={(e) => setRealtimePreview(e.target.checked)}
-            className={styles.checkbox}
+            className="whitespace-nowrap text-xs"
           >
             实时预览
           </Checkbox>
@@ -137,7 +137,7 @@ export const PacketPreview: React.FC = () => {
         <TextArea
           value={decodedContent}
           readOnly
-          className={styles.rightArea}
+          className="flex-1 font-mono text-xs resize-none h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-700 min-h-[100px] md:min-h-0"
           placeholder="解密后的数据"
         />
       </div>

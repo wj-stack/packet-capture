@@ -41,14 +41,7 @@ export interface Packet {
   socket?: number; // 套接字
   packetFunction?: PacketFunction; // 封包函数
   packetData?: string; // 封包数据（十六进制字符串）
-  statusCode?: number;
-  method?: string;
-  url?: string;
-  domain?: string;
   duration?: number;
-  headers?: Record<string, string>;
-  requestBody?: string;
-  responseBody?: string;
   rawData?: Uint8Array;
 }
 

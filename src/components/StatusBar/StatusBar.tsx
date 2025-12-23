@@ -2,7 +2,6 @@ import React from 'react';
 import { Space, Tag } from 'antd';
 import { useApp } from '../../contexts/AppContext';
 import { formatFileSize } from '../../utils/formatters';
-import styles from './StatusBar.module.css';
 
 export const StatusBar: React.FC = () => {
   const { state } = useApp();
@@ -31,8 +30,8 @@ export const StatusBar: React.FC = () => {
   };
 
   return (
-    <div className={styles.statusBar}>
-      <Space split={<span className={styles.separator}>|</span>}>
+    <div className="h-7 py-1 px-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex items-center text-xs text-gray-600 dark:text-gray-400 flex-shrink-0 shadow-sm">
+      <Space split={<span className="mx-2 text-gray-300 dark:text-gray-600">|</span>}>
         <span>
           已捕获: <strong>{statistics.totalPackets}</strong>
         </span>

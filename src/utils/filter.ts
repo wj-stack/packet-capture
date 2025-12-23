@@ -26,20 +26,6 @@ export const usePacketFilter = (
       return false;
     }
 
-    // 域名过滤
-    if (filters.domain && !packet.domain?.includes(filters.domain)) {
-      return false;
-    }
-
-    // HTTP方法过滤
-    if (filters.method && packet.method !== filters.method) {
-      return false;
-    }
-
-    // 状态码过滤
-    if (filters.statusCode && packet.statusCode !== filters.statusCode) {
-      return false;
-    }
 
     // 大小过滤
     if (filters.minSize && packet.size < filters.minSize) {
@@ -61,45 +47,35 @@ export const usePacketFilter = (
       const keyword = filters.useRegex
         ? filters.keyword
         : filters.keyword.toLowerCase();
-      const searchIn = filters.searchIn || ['url', 'header', 'body'];
 
       let matched = false;
 
-      if (searchIn.includes('url') && packet.url) {
+      // 搜索封包数据
+      if (packet.packetData) {
         if (filters.useRegex) {
           try {
-            matched = new RegExp(keyword).test(packet.url);
+            matched = new RegExp(keyword).test(packet.packetData);
           } catch {
             // 正则表达式无效，忽略
           }
         } else {
-          matched = packet.url.toLowerCase().includes(keyword);
+          matched = packet.packetData.toLowerCase().includes(keyword);
         }
       }
 
-      if (!matched && searchIn.includes('header') && packet.headers) {
-        const headerStr = JSON.stringify(packet.headers);
+      // 搜索原始数据
+      if (!matched && packet.rawData) {
+        const rawStr = Array.from(packet.rawData)
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join(' ');
         if (filters.useRegex) {
           try {
-            matched = new RegExp(keyword).test(headerStr);
+            matched = new RegExp(keyword).test(rawStr);
           } catch {
             // 正则表达式无效，忽略
           }
         } else {
-          matched = headerStr.toLowerCase().includes(keyword);
-        }
-      }
-
-      if (!matched && searchIn.includes('body')) {
-        const bodyStr = (packet.requestBody || packet.responseBody || '').toString();
-        if (filters.useRegex) {
-          try {
-            matched = new RegExp(keyword).test(bodyStr);
-          } catch {
-            // 正则表达式无效，忽略
-          }
-        } else {
-          matched = bodyStr.toLowerCase().includes(keyword);
+          matched = rawStr.toLowerCase().includes(keyword);
         }
       }
 

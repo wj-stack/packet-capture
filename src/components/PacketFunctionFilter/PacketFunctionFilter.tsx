@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Checkbox, Space } from 'antd';
 import { useApp } from '../../contexts/AppContext';
 import type { PacketFunction } from '../../types';
-import styles from './PacketFunctionFilter.module.css';
 
 const PACKET_FUNCTIONS: PacketFunction[] = [
   'Send',
@@ -66,9 +65,9 @@ export const PacketFunctionFilter: React.FC = () => {
   const allSelected = selectedFunctions.length === PACKET_FUNCTIONS.length;
 
   return (
-    <div className={styles.packetFunctionFilter}>
-      <div className={styles.title}>封包函数</div>
-      <Space wrap>
+    <div className="px-2 sm:px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm">
+      <div className="font-semibold mb-1.5 text-xs text-gray-900 dark:text-gray-100">封包函数</div>
+      <Space size="small" wrap className="w-full">
         <Checkbox
           checked={allSelected}
           indeterminate={selectedFunctions.length > 0 && !allSelected}

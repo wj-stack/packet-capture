@@ -3,7 +3,6 @@ import { Space, Select, Button, Checkbox, InputNumber } from 'antd';
 import { PlayCircleOutlined, StopOutlined, ClearOutlined } from '@ant-design/icons';
 import { useApp } from '../../contexts/AppContext';
 import { captureApi } from '../../api';
-import styles from './CaptureControls.module.css';
 
 
 export const CaptureControls: React.FC = () => {
@@ -38,13 +37,14 @@ export const CaptureControls: React.FC = () => {
   const isCapturing = captureStatus === 'capturing';
 
   return (
-    <div className={styles.captureControls}>
-      <Space size="middle" wrap>
+    <div className="px-2 sm:px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm">
+      <Space size="small" wrap className="w-full">
         <Button
           type={captureStatus === 'capturing' ? 'default' : 'primary'}
           icon={<PlayCircleOutlined />}
           onClick={handleStartCapture}
           disabled={captureStatus === 'capturing'}
+          className="shadow-sm"
         >
           开始抓包
         </Button>
@@ -52,10 +52,11 @@ export const CaptureControls: React.FC = () => {
           icon={<StopOutlined />}
           onClick={handleStopCapture}
           disabled={captureStatus === 'idle'}
+          className="shadow-sm"
         >
           结束抓包
         </Button>
-        <Button icon={<ClearOutlined />} onClick={handleClearData}>
+        <Button icon={<ClearOutlined />} onClick={handleClearData} className="shadow-sm">
           清空列表
         </Button>
 
@@ -68,7 +69,7 @@ export const CaptureControls: React.FC = () => {
         </Checkbox>
         {filterBySize && (
           <>
-            <span className={styles.label}>最短:</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">最短:</span>
             <InputNumber
               value={minSize}
               onChange={setMinSize}
@@ -77,7 +78,7 @@ export const CaptureControls: React.FC = () => {
               placeholder="最小长度"
               disabled={isCapturing}
             />
-            <span className={styles.label}>最长:</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">最长:</span>
             <InputNumber
               value={maxSize}
               onChange={setMaxSize}

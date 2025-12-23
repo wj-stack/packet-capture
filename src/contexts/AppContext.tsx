@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import type { AppState, AppAction } from '../types';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
+import { listen } from '@tauri-apps/api/event';
+import type { AppState, AppAction, Packet } from '../types';
+import { usePacketFilter } from '../utils/filter';
 
 const initialState: AppState = {
   captureStatus: 'idle',
@@ -10,7 +12,7 @@ const initialState: AppState = {
   filters: {
     protocols: [],
     packetFunctions: undefined,
-    searchIn: ['url', 'header', 'body'],
+    searchIn: [],
   },
   filterPresets: [],
   testSendPanelVisible: false,
@@ -237,6 +239,34 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+
+  // 监听 Tauri 事件：封包捕获
+  useEffect(() => {
+    const setupEventListeners = async () => {
+      // 监听封包捕获事件
+      const unlistenPacket = await listen<Packet>('packet-captured', (event) => {
+        dispatch({ type: 'ADD_PACKET', payload: event.payload });
+      });
+
+      // 清理函数
+      return () => {
+        unlistenPacket();
+      };
+    };
+
+    const cleanup = setupEventListeners();
+    
+    return () => {
+      cleanup.then((fn) => fn());
+    };
+  }, []);
+
+  // 自动更新过滤后的封包列表
+  useEffect(() => {
+    const filtered = usePacketFilter(state.packets, state.filters);
+    dispatch({ type: 'SET_FILTERED_PACKETS', payload: filtered });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.packets, state.filters]);
 
   return <AppContext.Provider value={{ state, dispatch }}>{children}</AppContext.Provider>;
 }

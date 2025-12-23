@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Table, Input, Button, Select, Checkbox, Space } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { PacketFeatureRule, PacketFunction } from '../../types';
-import styles from './PacketInterceptPanel.module.css';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -115,10 +114,10 @@ export const PacketInterceptPanel: React.FC = () => {
   ];
 
   return (
-    <div className={styles.packetInterceptPanel}>
-      <div className={styles.title}>封包拦截-过滤-网截-修改-记录</div>
+    <div className="p-4 h-full flex flex-col">
+      <div className="font-semibold mb-3 text-sm text-gray-900 dark:text-gray-100">封包拦截-过滤-网截-修改-记录</div>
 
-      <div className={styles.section}>
+      <div className="mb-4">
         <Table
           columns={columns}
           dataSource={rules}
@@ -129,17 +128,17 @@ export const PacketInterceptPanel: React.FC = () => {
         />
       </div>
 
-      <div className={styles.section}>
-        <div className={styles.inputGroup}>
-          <span className={styles.label}>待过滤特征:</span>
+      <div className="mb-4">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[100px]">待过滤特征:</span>
           <Input
             value={feature}
             onChange={(e) => setFeature(e.target.value)}
             placeholder="输入封包特征（十六进制或文本）"
           />
         </div>
-        <div className={styles.inputGroup}>
-          <span className={styles.label}>替换为特征:</span>
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[100px]">替换为特征:</span>
           <Input
             value={replacement}
             onChange={(e) => setReplacement(e.target.value)}
@@ -148,13 +147,14 @@ export const PacketInterceptPanel: React.FC = () => {
         </div>
       </div>
 
-      <div className={styles.section}>
+      <div className="mb-4">
         <Space wrap>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={handleAddFeature}
             disabled={!feature.trim()}
+            className="shadow-sm"
           >
             加入特征
           </Button>
@@ -181,13 +181,13 @@ export const PacketInterceptPanel: React.FC = () => {
         </Space>
       </div>
 
-      <div className={styles.section}>
-        <div className={styles.label}>封包特征拦截状态-</div>
+      <div className="mb-4">
+        <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[100px] mb-2">封包特征拦截状态-</div>
         <TextArea
           value={interceptLog.join('\n')}
           readOnly
           rows={8}
-          className={styles.logArea}
+          className="font-mono text-xs resize-none bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-700"
           placeholder="拦截日志将显示在这里..."
         />
       </div>

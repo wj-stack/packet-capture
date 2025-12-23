@@ -3,7 +3,6 @@ import { Drawer, Form, InputNumber, Switch, Select, Button, Space, Input } from 
 import { useApp } from '../../contexts/AppContext';
 import { settingsApi } from '../../api';
 import type { AppSettings, Theme, TimestampMode, ExportFormat } from '../../types';
-import styles from './SettingsPanel.module.css';
 
 const { Option } = Select;
 

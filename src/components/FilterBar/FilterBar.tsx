@@ -4,7 +4,6 @@ import { CloseOutlined } from '@ant-design/icons';
 import { useApp } from '../../contexts/AppContext';
 import { usePacketFilter } from '../../utils/filter';
 import type { Protocol } from '../../types';
-import styles from './FilterBar.module.css';
 
 const { Option } = Select;
 
@@ -113,9 +112,9 @@ export const FilterBar: React.FC = () => {
   }, [filters]);
 
   return (
-    <div className={styles.filterBar}>
+    <div className="py-2 px-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[60px] flex items-center shadow-sm">
       <Space wrap size="middle">
-        <span className={styles.label}>协议:</span>
+        <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">协议:</span>
         <Select
           mode="multiple"
           placeholder="选择协议"
@@ -130,7 +129,7 @@ export const FilterBar: React.FC = () => {
           ))}
         </Select>
 
-        <span className={styles.label}>方向:</span>
+        <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">方向:</span>
         <Select
           value={filters.direction || 'all'}
           onChange={handleDirectionChange}
@@ -143,7 +142,7 @@ export const FilterBar: React.FC = () => {
           ))}
         </Select>
 
-        <span className={styles.label}>域名:</span>
+        <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">域名:</span>
         <Input
           placeholder="输入域名"
           value={filters.domain}
@@ -152,7 +151,7 @@ export const FilterBar: React.FC = () => {
           allowClear
         />
 
-        <span className={styles.label}>方法:</span>
+        <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">方法:</span>
         <Select
           placeholder="HTTP方法"
           value={filters.method}
@@ -167,7 +166,7 @@ export const FilterBar: React.FC = () => {
           ))}
         </Select>
 
-        <span className={styles.label}>状态码:</span>
+        <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">状态码:</span>
         <InputNumber
           placeholder="状态码"
           value={filters.statusCode}
@@ -177,7 +176,7 @@ export const FilterBar: React.FC = () => {
           max={599}
         />
 
-        <span className={styles.label}>大小:</span>
+        <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">大小:</span>
         <InputNumber
           placeholder="最小"
           value={filters.minSize}
@@ -196,7 +195,7 @@ export const FilterBar: React.FC = () => {
           addonAfter="B"
         />
 
-        <span className={styles.label}>关键词:</span>
+        <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">关键词:</span>
         <Input
           placeholder="搜索关键词"
           value={filters.keyword}

@@ -7,13 +7,16 @@ import {
   SendOutlined,
   ExportOutlined,
   SettingOutlined,
+  SunOutlined,
+  MoonOutlined,
 } from '@ant-design/icons';
 import { useApp } from '../../contexts/AppContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { captureApi } from '../../api';
-import styles from './TopToolbar.module.css';
 
 export const TopToolbar: React.FC = () => {
   const { state, dispatch } = useApp();
+  const { theme, toggleTheme } = useTheme();
   const { captureStatus } = state;
 
   const handleStartCapture = async () => {
@@ -52,47 +55,75 @@ export const TopToolbar: React.FC = () => {
   };
 
   return (
-    <div className={styles.toolbar}>
-      <Space>
+    <div className="py-1.5 px-2 sm:px-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 shadow-sm">
+      <Space size="small" wrap className="flex-1">
         <Button
           type={captureStatus === 'capturing' ? 'primary' : 'default'}
           icon={<PlayCircleOutlined />}
           onClick={handleStartCapture}
           disabled={captureStatus === 'capturing'}
+          className="shadow-sm"
+          size="small"
         >
-          开始抓包
+          <span className="hidden sm:inline">开始抓包</span>
+          <span className="sm:hidden">开始</span>
         </Button>
         <Button
           type={captureStatus === 'stopping' ? 'primary' : 'default'}
           icon={<StopOutlined />}
           onClick={handleStopCapture}
           disabled={captureStatus === 'idle'}
+          className="shadow-sm"
+          size="small"
         >
-          停止抓包
+          <span className="hidden sm:inline">停止抓包</span>
+          <span className="sm:hidden">停止</span>
         </Button>
         <Button
           danger
           icon={<ClearOutlined />}
           onClick={handleClearData}
           disabled={state.packets.length === 0}
+          className="shadow-sm"
+          size="small"
         >
-          清空数据
+          <span className="hidden sm:inline">清空数据</span>
+          <span className="sm:hidden">清空</span>
         </Button>
         <Button
           type="primary"
-          style={{ background: '#52c41a', borderColor: '#52c41a' }}
+          className="bg-green-500 hover:bg-green-600 border-green-500 hover:border-green-600 shadow-sm"
           icon={<SendOutlined />}
           onClick={handleTestSend}
+          size="small"
         >
-          测试发包
+          <span className="hidden md:inline">测试发包</span>
+          <span className="md:hidden">测试</span>
         </Button>
-        <Button icon={<ExportOutlined />} onClick={handleExport}>
+        <Button 
+          icon={<ExportOutlined />} 
+          onClick={handleExport} 
+          className="shadow-sm hidden sm:inline-flex"
+          size="small"
+        >
           导出
         </Button>
-        <Button icon={<SettingOutlined />} onClick={handleSettings}>
-          设置
+        <Button 
+          icon={<SettingOutlined />} 
+          onClick={handleSettings} 
+          className="shadow-sm"
+          size="small"
+        >
+          <span className="hidden sm:inline">设置</span>
         </Button>
       </Space>
+      <Button
+        icon={theme === 'light' ? <SunOutlined /> : <MoonOutlined />}
+        onClick={toggleTheme}
+        className="shadow-sm flex-shrink-0"
+        size="small"
+        title={theme === 'light' ? '切换到深色主题' : '切换到浅色主题'}
+      />
     </div>
   );
 };

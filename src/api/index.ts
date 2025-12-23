@@ -1,5 +1,6 @@
 // API 抽象层 - 暂时不实现，只定义接口
 
+import { invoke } from '@tauri-apps/api/core';
 import type {
   Packet,
   PacketDetail,
@@ -15,16 +16,14 @@ import type {
 // 抓包相关命令
 export const captureApi = {
   startCapture: async (): Promise<void> => {
-    // TODO: 实现开始抓包
-    console.log('startCapture');
+    await invoke('start_capture');
   },
   stopCapture: async (): Promise<void> => {
-    // TODO: 实现停止抓包
-    console.log('stopCapture');
+    await invoke('stop_capture');
   },
   getCaptureStatus: async (): Promise<CaptureStatus> => {
-    // TODO: 实现获取抓包状态
-    return 'idle';
+    const status = await invoke<string>('get_capture_status');
+    return status as CaptureStatus;
   },
 };
 
