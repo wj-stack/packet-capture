@@ -1,0 +1,2 @@
+export { CaptureControls } from './CaptureControls';
+

@@ -1,0 +1,8 @@
+# Cargo 跨平台编译配置
+# 支持在 macOS 上交叉编译 Windows 目标
+
+# 构建配置
+[build]
+# 默认目标平台（可选）
+# target = "x86_64-pc-windows-msvc"
+
