@@ -1,16 +1,9 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
-#[cfg(windows)]
 use ipmb::{label, Options, Message, Selector};
-// hook-dll crate 在 Cargo.toml 中使用连字符，但在代码中使用下划线
-#[cfg(windows)]
 use hook_dll_lib::{HookCommand, TamperRule, PacketMessage};
-#[cfg(windows)]
 use std::sync::OnceLock;
-#[cfg(windows)]
 use std::sync::Arc;
-#[cfg(windows)]
 use std::thread;
 #[warn(unused)]
 use tauri::Emitter;
@@ -51,11 +44,9 @@ static CAPTURE_STATE: Mutex<CaptureState> = Mutex::new(CaptureState {
 
 // IPMB Sender 全局变量 - 用于与 DLL 通信
 // 使用 Box 存储闭包来避免类型推断问题
-#[cfg(windows)]
 static IPMB_SENDER: OnceLock<Mutex<Box<dyn Fn(HookCommand) -> Result<(), String> + Send + Sync>>> = OnceLock::new();
 
 // 初始化 IPMB sender 和 receiver
-#[cfg(windows)]
 fn init_ipmb_sender(app_handle: Arc<tauri::AppHandle>) -> Result<(), String> {
     // 初始化发送器（用于发送命令到 DLL）
     // 根据 IPMB 示例，join::<T, T> 表示 Message<T>，payload 也是 T
@@ -126,7 +117,6 @@ fn init_ipmb_sender(app_handle: Arc<tauri::AppHandle>) -> Result<(), String> {
 }
 
 // 发送消息到 DLL
-#[cfg(windows)]
 fn send_to_dll(command: HookCommand) -> Result<(), String> {
     let sender_fn = IPMB_SENDER.get()
         .ok_or("IPMB sender 未初始化")?;
@@ -266,44 +256,44 @@ async fn hook_wsarecv(enable: bool) -> Result<(), String> {
 
 // TamperRule 管理命令
 #[tauri::command]
-#[cfg(windows)]
 async fn add_tamper_rule(rule: TamperRule) -> Result<(), String> {
+    println!("[Tauri] 发送 AddTamperRule: {:?}", rule);
     send_to_dll(HookCommand::AddTamperRule(rule))
 }
 
 #[tauri::command]
-#[cfg(windows)]
 async fn remove_tamper_rule(id: String) -> Result<(), String> {
+    println!("[Tauri] 发送 RemoveTamperRule: {:?}", id);
     send_to_dll(HookCommand::RemoveTamperRule(id))
 }
 
 #[tauri::command]
-#[cfg(windows)]
 async fn update_tamper_rule(rule: TamperRule) -> Result<(), String> {
+    println!("[Tauri] 发送 UpdateTamperRule: {:?}", rule);
     send_to_dll(HookCommand::UpdateTamperRule(rule))
 }
 
 #[tauri::command]
-#[cfg(windows)]
 async fn enable_tamper_rule(id: String) -> Result<(), String> {
+    println!("[Tauri] 发送 EnableTamperRule: {:?}", id);
     send_to_dll(HookCommand::EnableTamperRule(id))
 }
 
 #[tauri::command]
-#[cfg(windows)]
 async fn disable_tamper_rule(id: String) -> Result<(), String> {
+    println!("[Tauri] 发送 DisableTamperRule: {:?}", id);
     send_to_dll(HookCommand::DisableTamperRule(id))
 }
 
 #[tauri::command]
-#[cfg(windows)]
 async fn list_tamper_rules() -> Result<(), String> {
+    println!("[Tauri] 发送 ListTamperRules");
     send_to_dll(HookCommand::ListTamperRules(()))
 }
 
 #[tauri::command]
-#[cfg(windows)]
 async fn clear_all_hits() -> Result<(), String> {
+    println!("[Tauri] 发送 ClearAllHits");
     send_to_dll(HookCommand::ClearAllHits(()))
 }
 
@@ -344,47 +334,6 @@ async fn hook_wsarecv(_enable: bool) -> Result<(), String> {
     Err("DLL 通信仅在 Windows 平台可用".to_string())
 }
 
-#[tauri::command]
-#[cfg(not(windows))]
-async fn add_tamper_rule(_rule: serde_json::Value) -> Result<(), String> {
-    Err("DLL 通信仅在 Windows 平台可用".to_string())
-}
-
-#[tauri::command]
-#[cfg(not(windows))]
-async fn remove_tamper_rule(_id: String) -> Result<(), String> {
-    Err("DLL 通信仅在 Windows 平台可用".to_string())
-}
-
-#[tauri::command]
-#[cfg(not(windows))]
-async fn update_tamper_rule(_rule: serde_json::Value) -> Result<(), String> {
-    Err("DLL 通信仅在 Windows 平台可用".to_string())
-}
-
-#[tauri::command]
-#[cfg(not(windows))]
-async fn enable_tamper_rule(_id: String) -> Result<(), String> {
-    Err("DLL 通信仅在 Windows 平台可用".to_string())
-}
-
-#[tauri::command]
-#[cfg(not(windows))]
-async fn disable_tamper_rule(_id: String) -> Result<(), String> {
-    Err("DLL 通信仅在 Windows 平台可用".to_string())
-}
-
-#[tauri::command]
-#[cfg(not(windows))]
-async fn list_tamper_rules() -> Result<(), String> {
-    Err("DLL 通信仅在 Windows 平台可用".to_string())
-}
-
-#[tauri::command]
-#[cfg(not(windows))]
-async fn clear_all_hits() -> Result<(), String> {
-    Err("DLL 通信仅在 Windows 平台可用".to_string())
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -399,17 +348,12 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             // 初始化 IPMB sender 和 receiver
-            #[cfg(windows)]
-            {
-                let app_handle = Arc::new(app.handle().clone());
-                if let Err(e) = init_ipmb_sender(app_handle) {
-                    println!("警告: IPMB 初始化失败: {}", e);
-                }
+            
+            let app_handle = Arc::new(app.handle().clone());
+            if let Err(e) = init_ipmb_sender(app_handle) {
+                println!("警告: IPMB 初始化失败: {}", e);
             }
-            #[cfg(not(windows))]
-            {
-                let _ = app; // 避免未使用变量警告
-            }
+            
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
