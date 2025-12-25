@@ -1,41 +1,7 @@
 fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    use hook_dll_lib::network_hook::{NetworkHookManager, SendHook, RecvHook, SendToHook, RecvFromHook};
-    use min_hook_rs::*;
 
-    println!("网络 Hook 演示");
+    println!("网络 Client 演示");
     println!("================");
-
-    // 检查是否支持
-    if !is_supported() {
-        eprintln!("错误: 仅支持 x64 Windows!");
-        return Ok(());
-    }
-
-    // 初始化 MinHook
-    println!("\n初始化 MinHook...");
-    initialize()?;
-
-    // 创建 Hook 管理器
-    let mut manager = NetworkHookManager::new();
-
-    // 创建并添加各种 Hook
-    println!("\n创建网络 Hook...");
-    let send_hook = SendHook::new()?;
-    let recv_hook = RecvHook::new()?;
-    let sendto_hook = SendToHook::new()?;
-    let recvfrom_hook = RecvFromHook::new()?;
-
-    manager.add_hook(Box::new(send_hook));
-    manager.add_hook(Box::new(recv_hook));
-    manager.add_hook(Box::new(sendto_hook));
-    manager.add_hook(Box::new(recvfrom_hook));
-
-    // 启用所有 Hook
-    println!("\n启用所有 Hook...");
-    manager.enable_all()?;
-    println!("所有 Hook 已启用");
-
-    println!("\nHook 已激活，现在所有网络发送/接收操作都会被拦截");
     println!("正在连接到服务器 127.0.0.1:8080...");
     
     // 执行网络通信（使用 Windows Winsock API）
@@ -121,24 +87,6 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             WSACleanup();
         }
     }
-
-
-    println!("按 Enter 键禁用 Hook...");
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input)?;
-    
-
-    // 禁用所有 Hook
-    println!("\n禁用所有 Hook...");
-    manager.disable_all()?;
-    println!("所有 Hook 已禁用");
-
-    // 清理资源
-    println!("\n清理资源...");
-    manager.cleanup_all()?;
-    uninitialize()?;
-    println!("清理完成");
-
     println!("\n演示完成!");
     Ok(())
 }

@@ -78,6 +78,77 @@ pub fn wildcard_match(pattern: &str, data: &[u8]) -> bool {
     false
 }
 
+/// 查找 pattern 在 data 中的匹配位置
+/// 返回匹配的起始位置和长度（字节数）
+pub fn wildcard_find(pattern: &str, data: &[u8]) -> Option<(usize, usize)> {
+    // 解析 pattern：移除空格，转换为小写，然后解析 hex 字节和通配符
+    let mut pattern_bytes = Vec::new();
+    
+    // 移除空格并转换为小写
+    let normalized: String = pattern.chars()
+        .filter(|c| !c.is_whitespace())
+        .map(|c| c.to_ascii_lowercase())
+        .collect();
+    
+    let normalized_bytes = normalized.as_bytes();
+    let mut idx = 0;
+    
+    while idx < normalized_bytes.len() {
+        if idx + 1 < normalized_bytes.len() && normalized_bytes[idx] == b'?' && normalized_bytes[idx + 1] == b'?' {
+            // 遇到 "??"，表示通配符
+            pattern_bytes.push(None); // None 表示通配符
+            idx += 2;
+        } else if idx + 1 < normalized_bytes.len() {
+            // 尝试解析 hex 字节（两个字符）
+            let hex_str = unsafe { std::str::from_utf8_unchecked(&normalized_bytes[idx..idx + 2]) };
+            if let Ok(byte) = u8::from_str_radix(hex_str, 16) {
+                pattern_bytes.push(Some(byte));
+                idx += 2;
+            } else {
+                // 无效的 hex 字符，匹配失败
+                return None;
+            }
+        } else {
+            // 奇数个字符，无法组成完整的 hex 字节
+            return None;
+        }
+    }
+    
+    // 如果 pattern 为空，则不匹配任何数据
+    if pattern_bytes.is_empty() {
+        return None;
+    }
+    
+    // 如果 data 长度小于 pattern 长度，无法匹配
+    if data.len() < pattern_bytes.len() {
+        return None;
+    }
+    
+    // 查找匹配位置
+    for start_idx in 0..=(data.len() - pattern_bytes.len()) {
+        let mut matched = true;
+        for (i, pattern_byte) in pattern_bytes.iter().enumerate() {
+            match pattern_byte {
+                None => {
+                    // 通配符，匹配任意字节
+                    continue;
+                }
+                Some(expected_byte) => {
+                    if data[start_idx + i] != *expected_byte {
+                        matched = false;
+                        break;
+                    }
+                }
+            }
+        }
+        if matched {
+            return Some((start_idx, pattern_bytes.len()));
+        }
+    }
+    
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::wildcard_match;
@@ -236,6 +307,29 @@ mod tests {
         assert!(wildcard_match(pattern, data1), "wildcard should match 0xbb");
         assert!(wildcard_match(pattern, data2), "wildcard should match 0x11");
         assert!(wildcard_match(pattern, data3), "wildcard should match 0xff");
+    }
+    
+    #[test]
+    fn test_wildcard_find_basic() {
+        use super::wildcard_find;
+        // 测试查找匹配位置
+        let pattern = "bb ?? dd";
+        let data = &[0xaa, 0xbb, 0xcc, 0xdd, 0xee];
+        let result = wildcard_find(pattern, data);
+        assert!(result.is_some(), "应该找到匹配位置");
+        let (start, length) = result.unwrap();
+        assert_eq!(start, 1, "匹配起始位置应该是 1");
+        assert_eq!(length, 3, "匹配长度应该是 3");
+    }
+    
+    #[test]
+    fn test_wildcard_find_no_match() {
+        use super::wildcard_find;
+        // 测试不匹配的情况
+        let pattern = "ff ff ff";
+        let data = &[0xaa, 0xbb, 0xcc];
+        let result = wildcard_find(pattern, data);
+        assert!(result.is_none(), "不应该找到匹配位置");
     }
 }
 

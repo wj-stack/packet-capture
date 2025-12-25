@@ -25,7 +25,7 @@ serde_json = "1"
 ipmb = "0.8"
 log = "0.4.29"
 type-uuid = "0.1.2"
-hook-dll={ path = "../hook-dll" }
+hook-dll = { path = "../hook-dll" }
 
 [target.'cfg(windows)'.dependencies]
 min_hook_rs = "2.1"
