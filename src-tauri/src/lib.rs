@@ -7,6 +7,16 @@ use std::sync::Arc;
 use std::thread;
 #[warn(unused)]
 use tauri::Emitter;
+use sysinfo::System;
+
+// 进程信息结构体
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessInfo {
+    pub pid: u32,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
+}
 
 // 封包数据结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -210,6 +220,33 @@ async fn get_capture_status() -> Result<String, String> {
     })
 }
 
+// 获取进程列表 - 跨平台实现
+#[tauri::command]
+async fn get_processes() -> Result<Vec<ProcessInfo>, String> {
+    let mut system = System::new_all();
+    system.refresh_all();
+    
+    let mut processes: Vec<ProcessInfo> = Vec::new();
+    
+    for (pid, process) in system.processes() {
+        let process_name = process.name().to_string();
+        
+        // 过滤掉系统进程（可选，根据需求调整）
+        // 在 macOS 和 Windows 上，可以根据进程名或路径进行过滤
+        
+        processes.push(ProcessInfo {
+            pid: pid.as_u32(),
+            name: process_name,
+            icon: None, // 图标功能可以后续实现
+        });
+    }
+    
+    // 按进程名排序，便于查找
+    processes.sort_by(|a, b| a.name.cmp(&b.name));
+    
+    Ok(processes)
+}
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -361,6 +398,7 @@ pub fn run() {
             start_capture,
             stop_capture,
             get_capture_status,
+            get_processes,
             // Hook 命令
             hook_send,
             hook_recv,
