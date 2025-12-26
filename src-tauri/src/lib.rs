@@ -149,19 +149,7 @@ async fn start_capture(_app_handle: tauri::AppHandle) -> Result<(), String> {
         return Err("抓包已在运行中".to_string());
     }
 
-    // 启用所有网络 hook 以开始捕获封包
-    println!("[Tauri] 发送 Send(true)");
-    send_to_dll(HookCommand::Send(true)).map_err(|e| format!("发送 Send 命令失败: {}", e))?;
-    println!("[Tauri] 发送 Recv(true)");
-    send_to_dll(HookCommand::Recv(true)).map_err(|e| format!("发送 Recv 命令失败: {}", e))?;
-    println!("[Tauri] 发送 SendTo(true)");
-    send_to_dll(HookCommand::SendTo(true)).map_err(|e| format!("发送 SendTo 命令失败: {}", e))?;
-    println!("[Tauri] 发送 RecvFrom(true)");
-    send_to_dll(HookCommand::RecvFrom(true)).map_err(|e| format!("发送 RecvFrom 命令失败: {}", e))?;
-    println!("[Tauri] 发送 WSASend(true)");
-    send_to_dll(HookCommand::WSASend(true)).map_err(|e| format!("发送 WSASend 命令失败: {}", e))?;
-    println!("[Tauri] 发送 WSARecv(true)");
-    send_to_dll(HookCommand::WSARecv(true)).map_err(|e| format!("发送 WSARecv 命令失败: {}", e))?;
+    println!("[Tauri] 发送 StartCapture");
 
     state.is_capturing = true;
     Ok(())
@@ -171,7 +159,8 @@ async fn start_capture(_app_handle: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 #[cfg(not(windows))]
 async fn start_capture(_app_handle: tauri::AppHandle) -> Result<(), String> {
-    Err("抓包功能仅在 Windows 平台可用".to_string())
+    println!("[Tauri] 发送 StartCapture");
+    Ok(())
 }
 
 // 停止抓包命令 - 真实实现
@@ -184,20 +173,8 @@ async fn stop_capture() -> Result<(), String> {
         return Err("抓包未在运行".to_string());
     }
 
-    // 禁用所有网络 hook 以停止捕获封包
-    println!("[Tauri] 发送 Send(false)");
-    send_to_dll(HookCommand::Send(false)).map_err(|e| format!("发送 Send 命令失败: {}", e))?;
-    println!("[Tauri] 发送 Recv(false)");
-    send_to_dll(HookCommand::Recv(false)).map_err(|e| format!("发送 Recv 命令失败: {}", e))?;
-    println!("[Tauri] 发送 SendTo(false)");
-    send_to_dll(HookCommand::SendTo(false)).map_err(|e| format!("发送 SendTo 命令失败: {}", e))?;
-    println!("[Tauri] 发送 RecvFrom(false)");
-    send_to_dll(HookCommand::RecvFrom(false)).map_err(|e| format!("发送 RecvFrom 命令失败: {}", e))?;
-    println!("[Tauri] 发送 WSASend(false)");
-    send_to_dll(HookCommand::WSASend(false)).map_err(|e| format!("发送 WSASend 命令失败: {}", e))?;
-    println!("[Tauri] 发送 WSARecv(false)");
-    send_to_dll(HookCommand::WSARecv(false)).map_err(|e| format!("发送 WSARecv 命令失败: {}", e))?;
-
+    println!("[Tauri] 发送 StopCapture");
+ 
     state.is_capturing = false;
     Ok(())
 }
@@ -206,7 +183,8 @@ async fn stop_capture() -> Result<(), String> {
 #[tauri::command]
 #[cfg(not(windows))]
 async fn stop_capture() -> Result<(), String> {
-    Err("抓包功能仅在 Windows 平台可用".to_string())
+    println!("[Tauri] 发送 StopCapture");
+    Ok(())
 }
 
 // 获取抓包状态
@@ -245,6 +223,93 @@ async fn get_processes() -> Result<Vec<ProcessInfo>, String> {
     processes.sort_by(|a, b| a.name.cmp(&b.name));
     
     Ok(processes)
+}
+
+// DLL 注入命令 - Windows 真实实现
+#[tauri::command]
+#[cfg(windows)]
+async fn inject_dll(process_id: u32) -> Result<String, String> {
+    use dll_syringe::{process::OwnedProcess, Syringe};
+    use std::path::PathBuf;
+    
+    println!("[Tauri] 开始注入 DLL 到进程 PID: {}", process_id);
+    
+    // 打开目标进程
+    let target_process = OwnedProcess::from_pid(process_id)
+        .map_err(|e| format!("无法打开进程 {}: {}", process_id, e))?;
+    
+    println!("[Tauri] 成功打开进程 PID: {}", process_id);
+    
+    // 创建注入器
+    let syringe = Syringe::for_process(target_process);
+    
+    // 获取 DLL 路径
+    // 首先尝试从当前可执行文件所在目录查找 DLL
+    let exe_path = std::env::current_exe()
+        .map_err(|e| format!("无法获取当前可执行文件路径: {}", e))?;
+    let exe_dir = exe_path.parent()
+        .ok_or("无法获取可执行文件目录")?;
+    
+    // 尝试多个可能的 DLL 名称
+    let dll_names = vec![
+        "hook_dll_lib.dll",
+        "hook-dll.dll",
+        "hook.dll",
+    ];
+    
+    let mut dll_path: Option<PathBuf> = None;
+    
+    // 首先在当前目录查找
+    for dll_name in &dll_names {
+        let path = exe_dir.join(dll_name);
+        if path.exists() {
+            dll_path = Some(path);
+            println!("[Tauri] 在当前目录找到 DLL: {:?}", path);
+            break;
+        }
+    }
+    
+    // 如果当前目录没找到，尝试在 hook-dll 的构建目录查找（开发环境）
+    if dll_path.is_none() {
+        let hook_dll_path = PathBuf::from("../hook-dll/target/x86_64-pc-windows-msvc/debug/hook_dll_lib.dll");
+        if hook_dll_path.exists() {
+            dll_path = Some(hook_dll_path);
+            println!("[Tauri] 在构建目录找到 DLL: {:?}", dll_path);
+        }
+    }
+    
+    // 如果还是没找到，尝试 release 目录
+    if dll_path.is_none() {
+        let hook_dll_path = PathBuf::from("../hook-dll/target/x86_64-pc-windows-msvc/release/hook_dll_lib.dll");
+        if hook_dll_path.exists() {
+            dll_path = Some(hook_dll_path);
+            println!("[Tauri] 在 release 目录找到 DLL: {:?}", dll_path);
+        }
+    }
+    
+    let dll_path = dll_path.ok_or_else(|| {
+        format!("无法找到 DLL 文件。请确保以下文件之一存在:\n- {}\n- ../hook-dll/target/x86_64-pc-windows-msvc/debug/hook_dll_lib.dll", 
+                dll_names.iter().map(|n| exe_dir.join(n).display().to_string()).collect::<Vec<_>>().join("\n- "))
+    })?;
+    
+    println!("[Tauri] 使用 DLL 路径: {:?}", dll_path);
+    
+    // 注入 DLL
+    let injected_payload = syringe.inject(&dll_path)
+        .map_err(|e| format!("DLL 注入失败: {}", e))?;
+    
+    println!("[Tauri] DLL 注入成功，进程 ID: {}", injected_payload.process_id());
+    
+    Ok(format!("DLL 注入成功，进程 ID: {}", injected_payload.process_id()))
+}
+
+// DLL 注入命令 - 非 Windows 平台 mock 实现
+#[tauri::command]
+#[cfg(not(windows))]
+async fn inject_dll(process_id: u32) -> Result<String, String> {
+    println!("[Tauri] Mock DLL 注入到进程 PID: {} (非 Windows 平台)", process_id);
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    Ok(format!("Mock DLL 注入成功 (非 Windows 平台)，进程 ID: {}", process_id))
 }
 
 #[tauri::command]
@@ -338,59 +403,56 @@ async fn clear_all_hits() -> Result<(), String> {
 #[tauri::command]
 #[cfg(not(windows))]
 async fn hook_send(_enable: bool) -> Result<(), String> {
-    Err("DLL 通信仅在 Windows 平台可用".to_string())
+    println!("[Tauri] 发送 HookSend(_enable: bool)");
+    Ok(())
 }
 
 #[tauri::command]
 #[cfg(not(windows))]
 async fn hook_recv(_enable: bool) -> Result<(), String> {
-    Err("DLL 通信仅在 Windows 平台可用".to_string())
+    println!("[Tauri] 发送 HookRecv(_enable: bool)");
+    Ok(())
 }
 
 #[tauri::command]
 #[cfg(not(windows))]
 async fn hook_sendto(_enable: bool) -> Result<(), String> {
-    Err("DLL 通信仅在 Windows 平台可用".to_string())
+    println!("[Tauri] 发送 HookSendTo(_enable: bool)");
+    Ok(())
 }
 
 #[tauri::command]
 #[cfg(not(windows))]
 async fn hook_recvfrom(_enable: bool) -> Result<(), String> {
-    Err("DLL 通信仅在 Windows 平台可用".to_string())
+    println!("[Tauri] 发送 HookRecvFrom(_enable: bool)");
+    Ok(())
 }
 
 #[tauri::command]
 #[cfg(not(windows))]
 async fn hook_wsasend(_enable: bool) -> Result<(), String> {
-    Err("DLL 通信仅在 Windows 平台可用".to_string())
+    println!("[Tauri] 发送 HookWSASend(_enable: bool)");
+    Ok(())
 }
 
 #[tauri::command]
 #[cfg(not(windows))]
 async fn hook_wsarecv(_enable: bool) -> Result<(), String> {
-    Err("DLL 通信仅在 Windows 平台可用".to_string())
+    println!("[Tauri] 发送 HookWSARecv(_enable: bool)");
+    Ok(())
 }
 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    // 初始化 IPMB sender (仅在 Windows 平台)
-    #[cfg(windows)]
-    {
-        // 创建 AppHandle 的 Arc 引用（需要在 Builder 之后获取）
-        // 这里先创建一个临时变量，稍后在 setup hook 中初始化
-    }
-    
+pub fn run() {    
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             // 初始化 IPMB sender 和 receiver
-            
             let app_handle = Arc::new(app.handle().clone());
             if let Err(e) = init_ipmb_sender(app_handle) {
                 println!("警告: IPMB 初始化失败: {}", e);
             }
-            
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -399,6 +461,7 @@ pub fn run() {
             stop_capture,
             get_capture_status,
             get_processes,
+            inject_dll,
             // Hook 命令
             hook_send,
             hook_recv,

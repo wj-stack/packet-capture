@@ -34,4 +34,5 @@ windows-sys = { version = "0.60", features = [
     "Win32_UI_WindowsAndMessaging", 
     "Win32_Foundation"
 ] }
+dll-syringe = "0.17.1"
 
