@@ -88,6 +88,7 @@ jobs:
           cargo build --release --target x86_64-pc-windows-msvc 
           mkdir -p ../src-tauri/resources
           cp target/x86_64-pc-windows-msvc/release/hook_dll_lib.dll ../src-tauri/resources/
+          dir ../src-tauri/resources
 
       - name: build frontend
         run: pnpm build
