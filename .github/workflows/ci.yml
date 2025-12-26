@@ -30,8 +30,10 @@ jobs:
       - name: lint frontend
         run: pnpm run build --mode check || true
 
-      - name: check Rust formatting
+      - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
+
+      - name: check Rust formatting
         run: |
           cd src-tauri
           cargo fmt --all -- --check || true
@@ -39,7 +41,6 @@ jobs:
           cargo fmt --all -- --check || true
 
       - name: check Rust clippy
-        uses: dtolnay/rust-toolchain@stable
         run: |
           cd src-tauri
           cargo clippy -- -D warnings || true
