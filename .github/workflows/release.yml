@@ -50,7 +50,6 @@ jobs:
         run: |
           cd hook-dll
           cargo build --release --target x86_64-pc-windows-msvc 
-          mkdir -p ../src-tauri/resources
           cp target/x86_64-pc-windows-msvc/release/hook_dll_lib.dll ../src-tauri/resources/
 
       - uses: tauri-apps/tauri-action@v0
