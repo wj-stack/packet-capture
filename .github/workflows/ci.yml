@@ -81,6 +81,14 @@ jobs:
       - name: install frontend dependencies
         run: pnpm install
 
+      - name: build hook-dll (Windows only)
+        if: matrix.platform == 'windows-latest'
+        run: |
+          cd hook-dll
+          cargo build --lib --target x86_64-pc-windows-msvc --debug
+          mkdir -p ../src-tauri/resources
+          cp target/x86_64-pc-windows-msvc/debug/hook_dll_lib.dll ../src-tauri/resources/
+
       - name: build frontend
         run: pnpm build
 
