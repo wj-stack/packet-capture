@@ -1,0 +1,3 @@
+[submodule "GameProxySnifferPro"]
+	path = GameProxySnifferPro
+	url = https://github.com/wj-stack/GameProxySnifferPro.git
