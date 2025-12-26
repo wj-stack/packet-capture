@@ -30,8 +30,8 @@ jobs:
       - name: lint frontend
         run: pnpm run build --mode check || true
 
-      - name: install Rust stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
 
       - name: check Rust formatting
         run: |
@@ -75,8 +75,8 @@ jobs:
         with:
           version: 8
 
-      - name: install Rust stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
         with:
           targets: ${{ matrix.target }}
 

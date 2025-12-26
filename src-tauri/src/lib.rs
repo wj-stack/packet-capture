@@ -263,8 +263,8 @@ async fn inject_dll(process_id: u32) -> Result<String, String> {
     for dll_name in &dll_names {
         let path = exe_dir.join(dll_name);
         if path.exists() {
-            dll_path = Some(path);
             println!("[Tauri] 在当前目录找到 DLL: {:?}", path);
+            dll_path = Some(path);
             break;
         }
     }
@@ -295,12 +295,12 @@ async fn inject_dll(process_id: u32) -> Result<String, String> {
     println!("[Tauri] 使用 DLL 路径: {:?}", dll_path);
     
     // 注入 DLL
-    let injected_payload = syringe.inject(&dll_path)
+    let _injected_payload = syringe.inject(&dll_path)
         .map_err(|e| format!("DLL 注入失败: {}", e))?;
     
-    println!("[Tauri] DLL 注入成功，进程 ID: {}", injected_payload.process_id());
+    println!("[Tauri] DLL 注入成功，进程 ID: {}", process_id);
     
-    Ok(format!("DLL 注入成功，进程 ID: {}", injected_payload.process_id()))
+    Ok(format!("DLL 注入成功，进程 ID: {}", process_id))
 }
 
 // DLL 注入命令 - 非 Windows 平台 mock 实现
