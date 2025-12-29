@@ -1135,6 +1135,10 @@ mod network_hook {
         // 先应用 TamperRule（检查所有规则，增加命中计数）
         let rule_action = if !buf.is_null() && len > 0 {
             let data_slice = std::slice::from_raw_parts(buf, len as usize);
+            
+            // 捕获并发送封包数据
+            capture_and_send_packet(data_slice, HookType::SendTo, s as u64, None, None);
+            
             apply_tamper_rules(data_slice, HookType::SendTo)
         } else {
             None
@@ -1277,6 +1281,9 @@ mod network_hook {
             let data_slice = std::slice::from_raw_parts(buf, result as usize);
             let from_addr = if !from.is_null() { from } else { ptr::null() };
             
+            // 捕获并发送封包数据
+            capture_and_send_packet(data_slice, HookType::RecvFrom, s as u64, None, None);
+            
             // 先应用 TamperRule（检查所有规则，增加命中计数）
             let rule_action = apply_tamper_rules(data_slice, HookType::RecvFrom);
             
@@ -1344,6 +1351,9 @@ mod network_hook {
             }
             
             if !all_data.is_empty() {
+                // 捕获并发送封包数据
+                capture_and_send_packet(&all_data, HookType::WSASend, s as u64, None, None);
+                
                 apply_tamper_rules(&all_data, HookType::WSASend)
             } else {
                 None
@@ -1441,6 +1451,9 @@ mod network_hook {
                     all_data.extend_from_slice(data_slice);
                 }
             }
+
+            // 捕获并发送封包数据
+            capture_and_send_packet(&all_data, HookType::WSARecv, s as u64, None, None);
 
             // 先应用 TamperRule（检查所有规则，增加命中计数）
             let rule_action = apply_tamper_rules(&all_data, HookType::WSARecv);
