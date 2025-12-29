@@ -1,6 +1,8 @@
 use std::error::Error;
 use std::ffi::c_void;
+#[allow(unused)]
 use std::ptr;
+#[allow(unused)]
 use std::sync::{Mutex, OnceLock};
 use ipmb::{MessageBox, label, Options, Message, Selector};
 use serde::{Deserialize, Serialize};
@@ -297,13 +299,14 @@ pub extern "system" fn DllMain(
 
 /// 工作线程过程函数
 /// 这个函数在独立的线程中运行，不在 DllMain 的加载器锁中
+#[allow(dead_code)]
 extern "system" fn worker_thread_proc(_lp_param: *mut c_void) -> u32 {
     // 现在可以安全地执行初始化操作
     perform_business_logic();
     0
 }
 
-/// 实际的业务逻辑函数
+#[allow(dead_code)]
 fn perform_business_logic() {
     // 带时间以及caller 以及文件名和行号
     env_logger::builder().format(|buf, record| {
@@ -336,6 +339,13 @@ pub enum HookCommand {
     DisableTamperRule(String), // id
     ListTamperRules(()),
     ClearAllHits(()), // 清空所有规则的命中计数
+    // 重放数据包命令
+    ReplayPacket {
+        hook_type: HookType,
+        socket: u64,
+        data: Vec<u8>,
+        dst_addr: Option<String>, // 对于 sendto 需要目标地址
+    },
 }
 
 /// PacketData - 封包数据消息（从 DLL 发送到 src-tauri）
@@ -515,6 +525,23 @@ fn fmain () -> Result<(), Box<dyn Error>> {
                 match manager.clear_all_hits() {
                     Ok(_) => info!("All rule hits cleared successfully"),
                     Err(e) => error!("Failed to clear all hits: {}", e),
+                }
+            }
+            #[allow(unused)]
+            HookCommand::ReplayPacket { hook_type, socket, data, dst_addr } => {
+                #[cfg(target_os = "windows")]
+                {
+                    use windows_sys::Win32::Networking::WinSock::SOCKET;
+                    unsafe {
+                        match network_hook::replay_packet(hook_type, socket as SOCKET, &data, dst_addr) {
+                            Ok(result) => info!("Packet replayed successfully, result: {}", result),
+                            Err(e) => error!("Failed to replay packet: {}", e),
+                        }
+                    }
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    error!("Replay packet is only supported on Windows");
                 }
             }
         }

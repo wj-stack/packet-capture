@@ -356,6 +356,58 @@ async fn hook_wsarecv(enable: bool) -> Result<(), String> {
     send_to_dll(HookCommand::WSARecv(enable))
 }
 
+// 重放数据包命令 - Windows 实现
+#[tauri::command]
+#[cfg(windows)]
+async fn replay_packet(
+    hook_type: String,
+    socket: u64,
+    data: String, // 十六进制字符串，空格分隔
+    dst_addr: Option<String>,
+) -> Result<(), String> {
+    use hook_dll_lib::HookType;
+    
+    // 转换 hook_type 字符串到枚举
+    let hook_type_enum = match hook_type.as_str() {
+        "send" => HookType::Send,
+        "sendto" => HookType::SendTo,
+        "WSASend" => HookType::WSASend,
+        _ => return Err(format!("Unsupported hook type for replay: {}", hook_type)),
+    };
+    
+    // 将十六进制字符串转换为字节数组
+    let normalized: String = data.chars()
+        .filter(|c| !c.is_whitespace())
+        .map(|c| c.to_ascii_lowercase())
+        .collect();
+    
+    if normalized.len() % 2 != 0 {
+        return Err("十六进制字符串长度必须是偶数".to_string());
+    }
+    
+    let mut bytes = Vec::new();
+    let mut idx = 0;
+    let normalized_bytes = normalized.as_bytes();
+    
+    while idx + 1 < normalized_bytes.len() {
+        let hex_str = unsafe { std::str::from_utf8_unchecked(&normalized_bytes[idx..idx + 2]) };
+        match u8::from_str_radix(hex_str, 16) {
+            Ok(byte) => {
+                bytes.push(byte);
+                idx += 2;
+            }
+            Err(e) => return Err(format!("无效的十六进制字符: {}", e)),
+        }
+    }
+    
+    send_to_dll(HookCommand::ReplayPacket {
+        hook_type: hook_type_enum,
+        socket,
+        data: bytes,
+        dst_addr,
+    })
+}
+
 // TamperRule 管理命令
 #[tauri::command]
 async fn add_tamper_rule(rule: TamperRule) -> Result<(), String> {
@@ -442,6 +494,19 @@ async fn hook_wsarecv(_enable: bool) -> Result<(), String> {
     Ok(())
 }
 
+// 重放数据包命令 - 非 Windows 平台占位实现
+#[tauri::command]
+#[cfg(not(windows))]
+async fn replay_packet(
+    _hook_type: String,
+    _socket: u64,
+    _data: String,
+    _dst_addr: Option<String>,
+) -> Result<(), String> {
+    println!("[Tauri] Replay packet (not supported on non-Windows platform)");
+    Ok(())
+}
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {    
@@ -456,6 +521,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            replay_packet,
             greet,
             start_capture,
             stop_capture,

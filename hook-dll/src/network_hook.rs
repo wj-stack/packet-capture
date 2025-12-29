@@ -8,10 +8,14 @@ mod network_hook {
     use windows_sys::Win32::System::IO::OVERLAPPED;
     
     use core::option::Option::None;
+    #[allow(unused)]
     use std::ffi::c_void;
+    #[allow(unused)]
     use std::ptr;
+    #[allow(unused)]
     use std::sync::{Arc, Mutex, OnceLock};
     use log::*;
+    #[allow(unused)]
     use crate::{HookType, TamperAction, TamperRule, capture_and_send_packet, get_socket_local_addr, get_socket_remote_addr, get_socket_protocol, sockaddr_to_string};
     use crate::wildcard::{wildcard_match, wildcard_find};
     
@@ -967,6 +971,7 @@ mod network_hook {
     
     
     /// 应用规则到数据包（内部实现）
+    #[allow(dead_code)]
     pub(crate) fn apply_tamper_rules(data: &[u8], hook_type: HookType) -> Option<PacketAction> {
         #[cfg(test)]
         {
@@ -992,6 +997,7 @@ mod network_hook {
     }
     
     /// 应用规则到数据包（实际实现）
+    #[allow(dead_code)]
     fn apply_tamper_rules_impl(data: &[u8], hook_type: HookType, rules: &mut Vec<TamperRule>) -> Option<PacketAction> {
         for rule in rules.iter_mut() {
             if !rule.active {
@@ -1553,6 +1559,102 @@ mod network_hook {
 
         result
     }
+
+    /// 重放数据包 - 根据 hook 类型调用相应的原始函数发送数据
+    #[cfg(target_os = "windows")]
+    pub unsafe fn replay_packet(
+        hook_type: HookType,
+        socket: SOCKET,
+        data: &[u8],
+        dst_addr: Option<String>,
+    ) -> std::result::Result<i32, String> {
+        match hook_type {
+            HookType::Send => {
+                if let Some(original_fn) = ORIGINAL_SEND {
+                    let result = original_fn(socket, data.as_ptr(), data.len() as i32, 0);
+                    Ok(result)
+                } else {
+                    Err("Original send function not available".to_string())
+                }
+            }
+            HookType::SendTo => {
+                if let Some(original_fn) = ORIGINAL_SENDTO {
+                    // 解析目标地址
+                    let (to_addr, tolen) = if let Some(addr_str) = dst_addr {
+                        parse_sockaddr(&addr_str)?
+                    } else {
+                        return Err("sendto requires destination address".to_string());
+                    };
+                    
+                    let result = original_fn(socket, data.as_ptr(), data.len() as i32, 0, &to_addr as *const _ as *const SOCKADDR, tolen);
+                    Ok(result)
+                } else {
+                    Err("Original sendto function not available".to_string())
+                }
+            }
+            HookType::WSASend => {
+                if let Some(original_fn) = ORIGINAL_WSASEND {
+                    // 创建 WSABUF - 需要将数据复制到可变的缓冲区
+                    let mut data_copy = data.to_vec();
+                    let wsa_buf = WSABUF {
+                        len: data_copy.len() as u32,
+                        buf: data_copy.as_mut_ptr(),
+                    };
+                    let mut bytes_sent = 0u32;
+                    let result = original_fn(
+                        socket,
+                        &wsa_buf as *const _,
+                        1,
+                        &mut bytes_sent,
+                        0,
+                        ptr::null_mut(),
+                        None,
+                    );
+                    // 防止 data_copy 被释放
+                    std::mem::forget(data_copy);
+                    Ok(result)
+                } else {
+                    Err("Original WSASend function not available".to_string())
+                }
+            }
+            _ => Err(format!("Replay not supported for hook type: {:?}", hook_type)),
+        }
+    }
+    
+    /// 解析地址字符串为 SOCKADDR_IN
+    #[cfg(target_os = "windows")]
+    fn parse_sockaddr(addr_str: &str) -> std::result::Result<(SOCKADDR_IN, i32), String> {
+        let parts: Vec<&str> = addr_str.split(':').collect();
+        if parts.len() != 2 {
+            return Err(format!("Invalid address format: {}", addr_str));
+        }
+        
+        let ip_str = parts[0];
+        let port: u16 = parts[1].parse()
+            .map_err(|_| format!("Invalid port: {}", parts[1]))?;
+        
+        // 转换 IP 地址
+        let ip_bytes: Vec<u8> = ip_str.split('.').map(|s| s.parse::<u8>()).collect::<std::result::Result<_, _>>()
+            .map_err(|_| format!("Invalid IP address: {}", ip_str))?;
+        
+        if ip_bytes.len() != 4 {
+            return Err(format!("Invalid IP address format: {}", ip_str));
+        }
+        
+        let ip_addr = ((ip_bytes[0] as u32) << 24) |
+                      ((ip_bytes[1] as u32) << 16) |
+                      ((ip_bytes[2] as u32) << 8) |
+                      (ip_bytes[3] as u32);
+        
+        unsafe {
+            let mut addr: SOCKADDR_IN = std::mem::zeroed();
+            addr.sin_family = AF_INET as u16;
+            addr.sin_port = htons(port);
+            addr.sin_addr.S_un.S_addr = ip_addr;
+            
+            Ok((addr, std::mem::size_of::<SOCKADDR_IN>() as i32))
+        }
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -1564,6 +1666,9 @@ pub use network_hook::{
 pub use network_hook::{
     NetworkHook, NetworkHookManager, PacketAction, set_global_rules
 };
+
+#[cfg(target_os = "windows")]
+pub use network_hook::replay_packet;
 
 #[cfg(test)]
 mod tests {
