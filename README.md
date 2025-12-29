@@ -2,6 +2,8 @@
 
 一个基于 Windows 平台的网络数据包捕获和分析工具，通过 DLL 注入和 API Hook 技术实时拦截和监控应用程序的网络通信。
 
+![Packet Capture 界面截图](./image.png)
+
 ## ✨ 功能特性
 
 ### 核心功能
