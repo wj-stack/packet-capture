@@ -69,13 +69,114 @@ fn bytes_to_hex_string(data: &[u8]) -> String {
 // 封包计数器（用于生成唯一 ID）
 static PACKET_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
+#[cfg(target_os = "windows")]
+/// 从 SOCKADDR 解析地址字符串
+pub unsafe fn sockaddr_to_string(addr: *const windows_sys::Win32::Networking::WinSock::SOCKADDR) -> Option<String> {
+    if addr.is_null() {
+        return None;
+    }
+    
+    let sockaddr = *addr;
+    if sockaddr.sa_family == windows_sys::Win32::Networking::WinSock::AF_INET as u16 {
+        let addr_in = addr as *const windows_sys::Win32::Networking::WinSock::SOCKADDR_IN;
+        let ip = u32::from_be((*addr_in).sin_addr.S_un.S_addr);
+        let ip_bytes = ip.to_be_bytes();
+        let port = u16::from_be((*addr_in).sin_port);
+        Some(format!("{}.{}.{}.{}:{}", ip_bytes[0], ip_bytes[1], ip_bytes[2], ip_bytes[3], port))
+    } else if sockaddr.sa_family == windows_sys::Win32::Networking::WinSock::AF_INET6 as u16 {
+        // IPv6 支持（简化处理）
+        Some("::1:0".to_string())
+    } else {
+        None
+    }
+}
+
+#[cfg(target_os = "windows")]
+/// 从 SOCKET 获取本地地址（src_addr）
+pub unsafe fn get_socket_local_addr(socket: windows_sys::Win32::Networking::WinSock::SOCKET) -> Option<String> {
+    use windows_sys::Win32::Networking::WinSock::{SOCKADDR_IN, SOCKADDR, getsockname};
+    
+    let mut addr: SOCKADDR_IN = std::mem::zeroed();
+    let mut addr_len = std::mem::size_of::<SOCKADDR_IN>() as i32;
+    
+    if getsockname(socket, &mut addr as *mut _ as *mut SOCKADDR, &mut addr_len) == 0 {
+        sockaddr_to_string(&addr as *const _ as *const SOCKADDR)
+    } else {
+        None
+    }
+}
+
+#[cfg(target_os = "windows")]
+/// 从 SOCKET 获取远程地址（dst_addr）
+pub unsafe fn get_socket_remote_addr(socket: windows_sys::Win32::Networking::WinSock::SOCKET) -> Option<String> {
+    use windows_sys::Win32::Networking::WinSock::{SOCKADDR_IN, SOCKADDR, getpeername};
+    
+    let mut addr: SOCKADDR_IN = std::mem::zeroed();
+    let mut addr_len = std::mem::size_of::<SOCKADDR_IN>() as i32;
+    
+    if getpeername(socket, &mut addr as *mut _ as *mut SOCKADDR, &mut addr_len) == 0 {
+        sockaddr_to_string(&addr as *const _ as *const SOCKADDR)
+    } else {
+        None
+    }
+}
+
+#[cfg(target_os = "windows")]
+/// 从 SOCKET 获取协议类型（TCP/UDP）
+pub unsafe fn get_socket_protocol(socket: windows_sys::Win32::Networking::WinSock::SOCKET) -> String {
+    use windows_sys::Win32::Networking::WinSock::{getsockopt, SOL_SOCKET, SO_TYPE, SOCK_STREAM, SOCK_DGRAM};
+    
+    let mut protocol: i32 = 0;
+    let mut len = std::mem::size_of::<i32>() as i32;
+    
+    // 获取 socket 类型和协议
+    if getsockopt(
+        socket,
+        SOL_SOCKET as i32,
+        SO_TYPE as i32,
+        &mut protocol as *mut _ as *mut u8,
+        &mut len,
+    ) == 0 {
+        match protocol {
+            SOCK_STREAM => "TCP".to_string(),
+            SOCK_DGRAM => "UDP".to_string(),
+            _ => "UNKNOWN".to_string(),
+        }
+    } else {
+        // 默认返回 TCP
+        "TCP".to_string()
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+/// 非 Windows 平台的占位函数
+pub unsafe fn sockaddr_to_string(_addr: *const std::ffi::c_void) -> Option<String> {
+    None
+}
+
+#[cfg(not(target_os = "windows"))]
+pub unsafe fn get_socket_local_addr(_socket: u64) -> Option<String> {
+    None
+}
+
+#[cfg(not(target_os = "windows"))]
+pub unsafe fn get_socket_remote_addr(_socket: u64) -> Option<String> {
+    None
+}
+
+#[cfg(not(target_os = "windows"))]
+pub unsafe fn get_socket_protocol(_socket: u64) -> String {
+    "TCP".to_string()
+}
+
 // 捕获并发送封包数据
 pub fn capture_and_send_packet(
     data: &[u8],
     hook_type: HookType,
     socket: u64,
-    src_addr: Option<String>,
-    dst_addr: Option<String>,
+    protocol: String,
+    src_addr: String,
+    dst_addr: String,
 ) {
     if data.is_empty() {
         return;
@@ -87,9 +188,6 @@ pub fn capture_and_send_packet(
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_millis() as u64;
-    
-    // 确定协议（简化处理，实际应该从 socket 获取）
-    let protocol = "TCP".to_string();
     
     // 确定方向
     let direction = match hook_type {
@@ -104,8 +202,8 @@ pub fn capture_and_send_packet(
         process_name,
         protocol,
         direction: direction.to_string(),
-        src_addr: src_addr.unwrap_or_else(|| "0.0.0.0:0".to_string()),
-        dst_addr: dst_addr.unwrap_or_else(|| "0.0.0.0:0".to_string()),
+        src_addr,
+        dst_addr,
         size: data.len() as u32,
         socket: Some(socket),
         packet_function: Some(format!("{:?}", hook_type)),

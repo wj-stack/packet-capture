@@ -12,7 +12,7 @@ mod network_hook {
     use std::ptr;
     use std::sync::{Arc, Mutex, OnceLock};
     use log::*;
-    use crate::{HookType, TamperAction, TamperRule, capture_and_send_packet};
+    use crate::{HookType, TamperAction, TamperRule, capture_and_send_packet, get_socket_local_addr, get_socket_remote_addr, get_socket_protocol, sockaddr_to_string};
     use crate::wildcard::{wildcard_match, wildcard_find};
     
     // ========== 回调类型定义 ==========
@@ -1063,8 +1063,13 @@ mod network_hook {
             let rule_action = if !buf.is_null() && len > 0 {
                 let data_slice = std::slice::from_raw_parts(buf, len as usize);
                 
+                // 获取协议和地址信息
+                let protocol = get_socket_protocol(s);
+                let src_addr = get_socket_local_addr(s).unwrap_or_else(|| "0.0.0.0:0".to_string());
+                let dst_addr = get_socket_remote_addr(s).unwrap_or_else(|| "0.0.0.0:0".to_string());
+                
                 // 捕获并发送封包数据
-                capture_and_send_packet(data_slice, HookType::Send, s as u64, None, None);
+                capture_and_send_packet(data_slice, HookType::Send, s as u64, protocol, src_addr, dst_addr);
                 
                 apply_tamper_rules(data_slice, HookType::Send)
         } else {
@@ -1136,8 +1141,17 @@ mod network_hook {
         let rule_action = if !buf.is_null() && len > 0 {
             let data_slice = std::slice::from_raw_parts(buf, len as usize);
             
+            // 获取协议和地址信息
+            let protocol = get_socket_protocol(s);
+            let src_addr = get_socket_local_addr(s).unwrap_or_else(|| "0.0.0.0:0".to_string());
+            let dst_addr = if !to.is_null() {
+                sockaddr_to_string(to).unwrap_or_else(|| "0.0.0.0:0".to_string())
+            } else {
+                get_socket_remote_addr(s).unwrap_or_else(|| "0.0.0.0:0".to_string())
+            };
+            
             // 捕获并发送封包数据
-            capture_and_send_packet(data_slice, HookType::SendTo, s as u64, None, None);
+            capture_and_send_packet(data_slice, HookType::SendTo, s as u64, protocol, src_addr, dst_addr);
             
             apply_tamper_rules(data_slice, HookType::SendTo)
         } else {
@@ -1212,8 +1226,13 @@ mod network_hook {
         if result > 0 && !buf.is_null() {
             let data_slice = std::slice::from_raw_parts(buf, result as usize);
             
+            // 获取协议和地址信息
+            let protocol = get_socket_protocol(s);
+            let src_addr = get_socket_remote_addr(s).unwrap_or_else(|| "0.0.0.0:0".to_string()); // Recv 时，远程地址是源地址
+            let dst_addr = get_socket_local_addr(s).unwrap_or_else(|| "0.0.0.0:0".to_string()); // Recv 时，本地地址是目标地址
+            
             // 捕获并发送封包数据
-            capture_and_send_packet(data_slice, HookType::Recv, s as u64, None, None);
+            capture_and_send_packet(data_slice, HookType::Recv, s as u64, protocol, src_addr, dst_addr);
             
             // 先应用 TamperRule（检查所有规则，增加命中计数）
             let rule_action = apply_tamper_rules(data_slice, HookType::Recv);
@@ -1281,8 +1300,17 @@ mod network_hook {
             let data_slice = std::slice::from_raw_parts(buf, result as usize);
             let from_addr = if !from.is_null() { from } else { ptr::null() };
             
+            // 获取协议和地址信息
+            let protocol = get_socket_protocol(s);
+            let src_addr = if !from.is_null() {
+                sockaddr_to_string(from).unwrap_or_else(|| "0.0.0.0:0".to_string())
+            } else {
+                get_socket_remote_addr(s).unwrap_or_else(|| "0.0.0.0:0".to_string())
+            };
+            let dst_addr = get_socket_local_addr(s).unwrap_or_else(|| "0.0.0.0:0".to_string());
+            
             // 捕获并发送封包数据
-            capture_and_send_packet(data_slice, HookType::RecvFrom, s as u64, None, None);
+            capture_and_send_packet(data_slice, HookType::RecvFrom, s as u64, protocol, src_addr, dst_addr);
             
             // 先应用 TamperRule（检查所有规则，增加命中计数）
             let rule_action = apply_tamper_rules(data_slice, HookType::RecvFrom);
@@ -1351,8 +1379,13 @@ mod network_hook {
             }
             
             if !all_data.is_empty() {
+                // 获取协议和地址信息
+                let protocol = get_socket_protocol(s);
+                let src_addr = get_socket_local_addr(s).unwrap_or_else(|| "0.0.0.0:0".to_string());
+                let dst_addr = get_socket_remote_addr(s).unwrap_or_else(|| "0.0.0.0:0".to_string());
+                
                 // 捕获并发送封包数据
-                capture_and_send_packet(&all_data, HookType::WSASend, s as u64, None, None);
+                capture_and_send_packet(&all_data, HookType::WSASend, s as u64, protocol, src_addr, dst_addr);
                 
                 apply_tamper_rules(&all_data, HookType::WSASend)
             } else {
@@ -1452,8 +1485,13 @@ mod network_hook {
                 }
             }
 
+            // 获取协议和地址信息
+            let protocol = get_socket_protocol(s);
+            let src_addr = get_socket_remote_addr(s).unwrap_or_else(|| "0.0.0.0:0".to_string()); // WSARecv 时，远程地址是源地址
+            let dst_addr = get_socket_local_addr(s).unwrap_or_else(|| "0.0.0.0:0".to_string()); // WSARecv 时，本地地址是目标地址
+            
             // 捕获并发送封包数据
-            capture_and_send_packet(&all_data, HookType::WSARecv, s as u64, None, None);
+            capture_and_send_packet(&all_data, HookType::WSARecv, s as u64, protocol, src_addr, dst_addr);
 
             // 先应用 TamperRule（检查所有规则，增加命中计数）
             let rule_action = apply_tamper_rules(&all_data, HookType::WSARecv);
