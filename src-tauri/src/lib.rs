@@ -268,6 +268,18 @@ async fn inject_dll(process_id: u32) -> Result<String, String> {
             break;
         }
     }
+
+    // 在resources目录查找
+    if dll_path.is_none() {
+       for dll_name in &dll_names {
+        let path = PathBuf::from(format!("resources/{}", dll_name));
+        if path.exists() {
+            println!("[Tauri] 在 resources 目录找到 DLL: {:?}", path);
+            dll_path = Some(path);
+            break;
+        }
+       }
+    }
     
     // 如果当前目录没找到，尝试在 hook-dll 的构建目录查找（开发环境）
     if dll_path.is_none() {
