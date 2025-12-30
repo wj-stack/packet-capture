@@ -978,7 +978,9 @@ mod network_hook {
             if let Ok(guard) = TAMPER_RULES.lock() {
                 if let Some(rules_arc) = guard.as_ref() {
                     if let Ok(mut rules) = rules_arc.lock() {
-                        return apply_tamper_rules_impl(data, hook_type, &mut rules);
+                        let result = apply_tamper_rules_impl(data, hook_type, &mut rules);
+                        info!("apply_tamper_rules result: {:?}", result);
+                        return result;
                     }
                 }
             }

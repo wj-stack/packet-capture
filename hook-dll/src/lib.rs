@@ -407,6 +407,7 @@ fn fmain () -> Result<(), Box<dyn Error>> {
         manager.add_hook(Box::new(recvfrom_hook));
         manager.add_hook(Box::new(wsa_send_hook));
         manager.add_hook(Box::new(wsa_recv_hook));
+        manager.disable_all()?;
     }
     manager.enable_all()?;
     

@@ -70,6 +70,11 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
                         
                         // 短暂延迟
                         std::thread::sleep(std::time::Duration::from_millis(500));
+
+                        // 按回车
+                        println!("按回车键继续...");
+                        let mut input = String::new();
+                        std::io::stdin().read_line(&mut input)?;
                     }
                     
                     println!("所有测试消息已发送完成！");
